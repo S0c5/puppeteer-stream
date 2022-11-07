@@ -4,7 +4,7 @@ import puppeteer, {
 	Page,
 	BrowserLaunchArgumentOptions,
 	BrowserConnectOptions,
-} from "puppeteer-core";
+} from "puppeteer";
 import { Readable, ReadableOptions } from "stream";
 import path from "path";
 
@@ -15,10 +15,10 @@ export class Stream extends Readable {
 
 	_read() {}
 
-	async destroy() {
+	destroy() {
 		super.destroy();
 		// @ts-ignore
-		await this.page.browser().videoCaptureExtension.evaluate(
+		this.page.browser().videoCaptureExtension.evaluate(
 			(index: string) => {
 				// @ts-ignore
 				STOP_RECORDING(index);
@@ -26,10 +26,12 @@ export class Stream extends Readable {
 			// @ts-ignore
 			this.page._id
 		);
+
+		return this;
 	}
 }
 
-declare module "puppeteer-core" {
+declare module "puppeteer" {
 	interface Page {
 		index: number;
 		getStream(opts: getStreamOptions): Promise<Stream>;
@@ -96,7 +98,9 @@ export async function launch(
 
 	const extensionTarget = await browser.waitForTarget(
 		// @ts-ignore
-		(target) => target.type() === "background_page" && target._targetInfo.title === "Video Capture"
+		(target) => {
+			return target.type() === "background_page" && target.url().match(extensionId);
+		}
 	);
 
 	// @ts-ignore
